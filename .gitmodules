@@ -1,0 +1,3 @@
+[submodule "QtKittiVisualizer"]
+	path = QtKittiVisualizer
+	url = https://github.com/jerryz123/QtKittiVisualizer.git
