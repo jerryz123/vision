@@ -38,7 +38,7 @@ def load_file(pcd_file, calibration_file, rectifying_file):
               .reshape((3, 3))
     t = np.eye(4)
     t[:3, :3] = R_rect0
-    
+
     R_rect0 = t
     P_rect0 = np.array([float(i) for i in P_rect0[10:].split()])\
               .reshape((3, 4))
@@ -80,14 +80,15 @@ if __name__ == "__main__":
     print(R)
     print(T)
     cam_data = data.T
+    print(cam_data[:10])
 
     cam_data = np.dot(T, cam_data)
     cam_data = np.dot(R, cam_data)
     #cam_data = np.dot(P.T, cam_data)
- 
+
     cam_data = np.array([r for r in cam_data.T if r[2] > 0]).T
     plt.scatter(cam_data[0], -cam_data[1], c=cam_data[2])
-    #plt.imshow(img, extent=[-30, 30, -10, 10], cmap='gray')
+    plt.imshow(img, extent=[-30, 30, -10, 10], cmap='gray')
     plt.gca().set_aspect('equal', adjustable='box')
 
     plt.show()
