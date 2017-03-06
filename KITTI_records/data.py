@@ -17,9 +17,6 @@ def get_inds(path, ext='.png'):
     return inds
 
 
-def get_calib_dir(date='2011_09_26'):
-    return os.path.join(data_dir, date)
-
 
 def read_calib_file(path):
     float_chars = set("0123456789.e+- ")
@@ -93,8 +90,8 @@ class Calib(object):
     and can be applied with `homogeneous_transform`.
     """
 
-    def __init__(self, date='2011_09_26', color=False):
-        self.calib_dir = get_calib_dir(date=date)
+    def __init__(self, velodyne_dir, color=False):
+        self.calib_dir = os.path.join(velodyne_dir, "..")
         self.imu2velo = read_calib_file(
             os.path.join(self.calib_dir, "calib_imu_to_velo.txt"))
         self.velo2cam = read_calib_file(

@@ -3,22 +3,19 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import argparse
 
 from tensorflow.python.platform import gfile
+from scipy.interpolate import griddata
+from scipy.ndimage.filters import gaussian_filter
 
 from data import image_shape
-from data import get_drive_dir, Calib, get_inds, image_shape, get_calib_dir
+from data import get_drive_dir, Calib, get_inds, image_shape
 
 from PIL import Image
 
 root_dir = os.path.dirname(os.path.abspath(__file__))
-data_dir = os.path.join(root_dir, 'data')
-
-VELODYNE_DIRS = [
-                "2011_09_26/2011_09_26_drive_0001_sync/velodyne_points",
-                "2011_09_26/2011_09_26_drive_0002_sync/velodyne_points",
-                "2011_09_26/2011_09_26_drive_0005_sync/velodyne_points"
-                ]
+data_dir = os.path.join(root_dir, '../kittidata')
 
 def get_velodyne_points(velodyne_dir, frame):
     points_path = os.path.join(velodyne_dir, "data/%010d.bin" % frame)
@@ -28,7 +25,7 @@ def get_velodyne_points(velodyne_dir, frame):
 
 def load_disparity_points(velodyne_dir, frame, color=False, **kwargs):
 
-    calib = Calib(color=color, **kwargs)
+    calib = Calib(velodyne_dir, color=color, **kwargs)
 
     # read velodyne points
     points = get_velodyne_points(velodyne_dir, frame)
@@ -66,7 +63,6 @@ def test(vel, verbose=False):
         #print("r max: %f, min: %f" % (np.max(points[:,3]), np.min(points[:,3])))
 
         image_array = np.asarray([1224, 368])
-
         xyd = load_disparity_points(velodyne_dir, i, color=True)
         disp = np.zeros(image_shape, dtype=np.float)
         for x, y, d in np.round(xyd):
@@ -85,20 +81,42 @@ def test(vel, verbose=False):
         # plt.show()
 
         if verbose:
-            plt.subplot(121)
-            plt.imshow(image)
-            plt.title("Original")
-            plt.subplot(122)
-            plt.imshow(image)
-            plt.title("Depth")
-            plt.show()
+            newimg = np.zeros(width*height)
+            
+            x, y, d = xyd.T
+            points = np.array([x, y]).T
+            grid_x, grid_y = np.mgrid[0:width, 0:height]
+            newpoints = []
+            for x in range(0, width, 5):
+                for y in range(0, height, 5):
+                    if np.linalg.norm(points - np.array((x, y)), axis=1).min() > 8:
+                        newpoints += [[x, y]]
 
-            plt.figure(1)
+            newpoints = np.array(newpoints)
+            points = np.concatenate((points, newpoints))
+            d = np.concatenate((d, np.zeros(len(newpoints))))
+            grid = griddata(points, d, (grid_x, grid_y), method="nearest", fill_value=0)
+            grid = np.clip(grid, 0, 99999)
+            grid = gaussian_filter(grid,2)
             plt.clf()
-            plt.imshow(disp)
+            plt.imshow(grid.T, cmap="gray")
+            plt.colorbar()
             plt.show()
+            return
 
 
 if __name__ == '__main__':
-    for vel in VELODYNE_DIRS:
-        test(vel)
+    parser = argparse.ArgumentParser(description="createimg")
+    parser.add_argument('dataset', type=int,
+                        help="Dataset choice")
+    parser.add_argument("-v", help="increase output verbosity",
+                        action="store_true")
+    args = parser.parse_args()
+
+
+    args = parser.parse_args()
+    dataset = args.dataset
+    verbose = args.v
+
+    velodyne_dir = os.path.join(data_dir, "%04d_sync" % dataset, "velodyne_points")
+    test(velodyne_dir, verbose)
